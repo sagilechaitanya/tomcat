@@ -1,0 +1,79 @@
+---
+# tasks file for car
+- name: apt update
+  ansible.builtin.apt:
+    update_cache: yes
+  when: ansible_facts['distribution'] == "Ubuntu" 
+- name: installing  java_package 
+  ansible.builtin.package:
+    name: "{{java_package}}"
+    state: latest
+- name: creating a group
+  ansible.builtin.group:
+    name: "{{group_name}}" 
+    state: present 
+    system: true  
+- name: creating a user
+  ansible.builtin.user:
+    name:  "{{user_name}}" 
+    create_home: yes
+    group: "{{group_name}}"
+    home: "{{home}}" 
+    shell: "{{shell}}"
+    state: present
+- name: installing tomcat url
+  ansible.builtin.get_url:
+    url: "https://www-eu.apache.org/dist/tomcat/tomcat-{{tomcat_major_version}}/v{{tomcat_version}}/bin/apache-tomcat-{{tomcat_version}}.tar.gz "
+    dest: /tmp/
+    mode: '0777'
+- name: untaring the tomcat file
+  ansible.builtin.unarchive:
+    src: /tmp/apache-tomcat-{{tomcat_version}}.tar.gz
+    dest: "{{home}}"
+    remote_src: yes
+- name: createing a symbolic link
+  ansible.builtin.file:
+    src: /opt/tomcat/apache-tomcat-{{tomcat_version}}
+    path: /opt/tomcat/latest
+    state: link
+- name: changing ownership
+  ansible.builtin.file: 
+    owner: "{{user_name}}"
+    group: "{{group_name}}"
+    path: "{{home}}"
+    recurse: yes
+- name: giving executable permissions 
+  ansible.builtin.find:
+    path:  /opt/tomcat/latest/bin/
+    patterns: "*.sh"
+  register: files_to_change
+- name: add execute permissions for shell files
+  ansible.builtin.file: 
+    path: "{{ item.path }}"
+    owner: "{{user_name}}"
+    group: "{{group_name}}"
+    mode: '+x'
+  with_items: "{{ files_to_change.files }}"     
+- name: Creating SystemD Unit File
+  ansible.builtin.copy:
+    src: tomcat.service
+    dest: /etc/systemd/system/tomcat.service   
+    owner: "{{user_name}}"
+    group: "{{group_name}}"
+  notify:
+    - daemon-reload and enable tomcat   
+- name: Configuring Tomcat Web Management Interface
+  ansible.builtin.copy:
+    src: tomcat-users.xml
+    dest: /opt/tomcat/latest/conf/tomcat-users.xml
+- name: enable access to the web interface(manager)
+  ansible.builtin.copy:
+    src: context.xml
+    dest: "{{item}}"
+    owner: "{{user_name}}"
+    group: "{{group_name}}"
+  loop: 
+    - "{{home}}/latest/webapps/manager/META-INF/context.xml" 
+    - "{{home}}/latest/webapps/host-manager/META-INF/context.xml"
+  notify:
+    - restart tomcat 

@@ -1,0 +1,12 @@
+---
+# handlers file for car
+- name: restart tomcat
+  ansible.builtin.systemd:
+    name: tomcat.service
+    state: restarted
+- name: daemon-reload and enable tomcat
+  systemd:
+    name: tomcat.service
+    daemon_reload: yes
+    enabled: yes
+    state: started

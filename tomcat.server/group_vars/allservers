@@ -1,0 +1,7 @@
+---
+ group_name: tomcat
+ user_name: tomcat
+ tomcat_version: "10.1.5"
+ tomcat_major_version: "10"
+ home: /opt/tomcat 
+ shell: /bin/false

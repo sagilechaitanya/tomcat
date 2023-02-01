@@ -1,0 +1,6 @@
+---
+- name: installing tomcaton both ubuntu and centos
+  hosts: all
+  become: yes
+  roles:
+    - tomcat.server
